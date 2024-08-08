@@ -1,9 +1,13 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from rest_framework.views import *
 from django.contrib.auth.models import User
 from rest_framework import status 
 from django.contrib.auth import authenticate, logout
 from rest_framework.authtoken.models import Token
+from rest_framework.permissions import IsAuthenticated
+from django.http import JsonResponse
+from django.contrib.auth import logout as django_logout
+
 
 #from .models import Task 
 
@@ -29,6 +33,7 @@ class UserCreateView(APIView):
             status=status.HTTP_201_CREATED
         )
     
+    
 class LoginView(APIView):
     def post(self, request):
         username = request.data.get('username')
@@ -46,24 +51,26 @@ class LoginView(APIView):
             # Return error message 
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED  )   
 
+        
+    
 class LogoutView(APIView):
     def post(self, request):
-        # Custom authentication class handles invalid tokens
+        auth_header = request.headers.get('Authorization')
         if request.user and request.user.is_authenticated:
-            try:
                 # Attempt to retrieve and delete the token
-                token = Token.objects.get(user=request.user)
+                
+                token , create = Token.objects.get(user=request.user)
                 token.delete()
 
                 # Log the user out
                 logout(request)
 
                 return Response({'message': 'Successfully logged out'}, status=status.HTTP_200_OK)
-            except Token.DoesNotExist:
-                #message for invalid tokens
-                return Response({'detail': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+        elif auth_header is None:
+             return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
         else:
-            return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'detail': 'Invalid token.'}, status=status.HTTP_401_UNAUTHORIZED)
+           
                
             
 
@@ -88,14 +95,3 @@ class ClearDatabaseView(APIView):
 
 
 
-
-# 1. Implement the `post` method to handle POST requests for creating a new user.
-# 2. Check for the presence of: `username`, `password`, and `email`. If any of these values are missing in the request body,
-#  return an error message `{'error': 'Username, password, and email are required'}` with the status code `400 BAD REQUEST`.
-# 3. Check if a user with the specified `username` already exists. If a user with this username already exists,
-# return an error message `{'error': 'Username already exists'}` with the status code `400 BAD REQUEST`.
-# 4. If all data is valid, create a new user. Upon successful creation of the user,
-# return a user data (id, username, email) in JSON format with the status code `201 CREATED`.
-
-# Hint: To work with the `User` model and send HTTP responses,
-#  use the appropriate functions from Django REST Framework: `User.objects.create_user`, `Response`
