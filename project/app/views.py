@@ -99,9 +99,12 @@ class ClearDatabaseView(APIView):
 # Create your views here.
 
 class TaskCreateView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         data = request.data
-        creator_id = request.user.id
+        creator_id = request.user.pk
         executor_id = data.get('executor')
 
         #creator is not the same as the executor
@@ -115,9 +118,9 @@ class TaskCreateView(APIView):
 
         # Include the creator in the data
         data['creator'] = creator_id
-
+        print("[+] data: ", data)
         # Create a serializer instance with the updated data
-        serializer = TaskSerializer(data=data, context={'request': request})
+        serializer = TaskSerializer(data=data)
 
         # Validate and save the data
         if serializer.is_valid():

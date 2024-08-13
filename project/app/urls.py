@@ -3,8 +3,8 @@ from .views import *
 
 urlpatterns = [
     path('user/create/', UserCreateView.as_view(), name='user_create'),
-    path('app/login/', LoginView.as_view(), name='login'),
-    path('app/logout/', LogoutView.as_view(), name='logout'),
+    path('login/', LoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
     path('task/create/', TaskCreateView.as_view(), name='task_create'),
     path('tasks-created-by-user/', TasksCreatedByUser.as_view(), name='user_tasks'),
     #path('app/user-tasks-stats/', UserTasksStatsAPIView.as_view(), name='user-tasks-stats'),
