@@ -7,6 +7,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from django.http import JsonResponse
 from django.contrib.auth import logout as django_logout
+from rest_framework.authentication import TokenAuthentication
 
 
 #from .models import Task 
@@ -54,12 +55,14 @@ class LoginView(APIView):
         
     
 class LogoutView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         auth_header = request.headers.get('Authorization')
         if request.user and request.user.is_authenticated:
                 # Attempt to retrieve and delete the token
                 
-                token , create = Token.objects.get(user=request.user)
+                token , create = Token.objects.get_or_create(user=request.user)
                 token.delete()
 
                 # Log the user out
