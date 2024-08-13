@@ -43,7 +43,7 @@ class TestLoginView(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json(), {'error': 'Invalid credentials'})
 
-    def test_logout_success(self):
+    def test_login_success(self):
         response = requests.post(BASE_URL + 'login/', data={'username': 'test_user', 'password': 'test_password'})
         token = response.json().get('token')
         self.assertIsInstance(token, str)
