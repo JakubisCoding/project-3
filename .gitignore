@@ -4,6 +4,6 @@ solved project.zip
 .vscode
 client
 env
-project
+# project
 описание*
 tests/__pycache__/
