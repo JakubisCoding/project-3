@@ -21,6 +21,8 @@ class TaskWithExecutorAPITestCase(unittest.TestCase):
         self.task_id_1 = self.create_task('Test Task', 100, '2024-06-01', self.executor_id)
         self.task_id_2 = self.create_task('Test Task', 100, '2024-06-01', None)
 
+        
+
     def tearDown(self):
         self.clear_database()
 
@@ -60,7 +62,7 @@ class TaskWithExecutorAPITestCase(unittest.TestCase):
         return response.json().get('id')
 
     def test_get_task_with_executors(self):
-        response = requests.get(BASE_URL + 'task/executor/')
+        response = requests.get(BASE_URL + 'task/executor/', headers=self.headers)
         self.assertEqual(response.status_code, 200)
 
         tasks = response.json()
@@ -72,7 +74,7 @@ class TaskWithExecutorAPITestCase(unittest.TestCase):
 
 
     def test_get_task_without_executors(self):
-        response = requests.get(BASE_URL + 'task/executor/')
+        response = requests.get(BASE_URL + 'task/executor/', headers=self.headers)
         self.assertEqual(response.status_code, 200)
         tasks = response.json()
 
