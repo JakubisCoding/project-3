@@ -79,16 +79,6 @@ class LogoutView(APIView):
             
 
 
-           
-    
-    
-class ClearDatabaseView(APIView):
-    def get(self, request):
-        #Task.objects.all().delete()
-        User.objects.all().delete()
-        return Response({'message': 'All data cleared successfully'}, status=200)
-    
-
 
 
 
@@ -131,35 +121,39 @@ class TaskCreateView(APIView):
 
 
 class TasksCreatedByUser(APIView):
+    authentication_classes = [TokenAuthentication]
+
     permission_classes = [IsAuthenticated]  # Ensure only authenticated users can access this view
 
     def get(self, request):
         user = request.user
         # Filter tasks where the creator is the current user
         tasks = Task.objects.filter(creator=user)
-        serializer = TaskSerializer(tasks, many=True, context={'request': request})
+        serializer = TaskSerializer(tasks, many=True)
 
         # Return the serialized data as a JSON response
-        return Response(serializer.data, safe=False, status=status.HTTP_200_OK)
+        return Response(serializer.data,status=status.HTTP_200_OK)
     
 class TaskWithExecutorAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    
     def get(self, request):
-        # Retrieve all tasks
+        print("Received GET request from user:", request.user)
         tasks = Task.objects.all()
-        
-        # Serialize tasks with custom handling for undefined executors
+        print("Tasks fetched:", tasks)
         serialized_tasks = []
         for task in tasks:
             data = {
-                'executor': task.executor if task.executor else 'undefined',
+                'executor': task.executor.username if task.executor else 'undefined',
                 'name': task.name,
-                'cost': task.cost,
-                'deadline': task.deadline
+                'cost': f'{task.cost:.2f}',
+                'deadline': task.deadline,
             }
             serialized_tasks.append(data)
-        
-        # Return the serialized data as a JSON response
-        return Response(serialized_tasks, safe=False, status=status.HTTP_200_OK)
+        print("Serialized tasks:", serialized_tasks)
+        return Response(serialized_tasks, status=status.HTTP_200_OK)
+    
 
 
 
