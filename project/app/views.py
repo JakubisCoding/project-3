@@ -13,6 +13,10 @@ from .serializers import TaskSerializer
 from .models import *
 
 
+from django.utils import timezone
+from django.db.models import Sum, Count
+from rest_framework import generics
+
 
 
 #This view allows for the creation of a user.
@@ -153,16 +157,103 @@ class TaskWithExecutorAPIView(APIView):
             serialized_tasks.append(data)
         print("Serialized tasks:", serialized_tasks)
         return Response(serialized_tasks, status=status.HTTP_200_OK)
-    
-
-
-
-
-
-
 
 class ClearDatabaseView(APIView):
     def get(self, request):
         Task.objects.all().delete()
         User.objects.all().delete()
         return Response({'message': 'All data cleared successfully'}, status=200)
+
+
+
+class UserTasksStatsAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        completed_tasks = Task.objects.filter(creator=user, is_done=True).count()
+        pending_tasks = Task.objects.filter(creator=user, is_done=False).count()
+        overdue_tasks = Task.objects.filter(creator=user, is_done=False, deadline__lt=timezone.now()).count()
+        assigned_tasks = Task.objects.filter(executor=user).count()
+        total_earned = Task.objects.filter(executor=user, is_done=True).aggregate(Sum('cost'))['cost__sum']
+        total_spent = Task.objects.filter(creator=user).aggregate(Sum('cost'))['cost__sum']
+
+        stats_data = {
+            'completed_tasks': completed_tasks,
+            'pending_tasks': pending_tasks,
+            'overdue_tasks': overdue_tasks,
+            'assigned_tasks': assigned_tasks,
+            'total_earned': total_earned if total_earned else 0,
+            'total_spent': total_spent if total_spent else 0,
+        }
+
+        return Response(stats_data, status=status.HTTP_200_OK)
+    
+class UnassignedTasksAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        unassigned_tasks = Task.objects.filter(executor__isnull=True).order_by('cost')
+
+        serializer = TaskSerializer(unassigned_tasks, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class UserTasksAPIView(generics.ListAPIView):
+    serializer_class = TaskSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Task.objects.filter(executor=user.pk)
+        return queryset
+    
+
+class BecomeExecutorAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, task_id):
+        user = request.user
+
+        try:
+            task = Task.objects.get(pk=task_id)
+        except Task.DoesNotExist:
+            return Response({'error': 'Task not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if task.creator == user:
+            return Response({'error': 'You cannot assign yourself as executor of your own task'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if task.executor:
+            return Response({'error': 'This task already has an executor'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        task.executor = user
+        task.save()
+
+        return Response({'message': 'You have been assigned as the executor of the task'},
+                        status=status.HTTP_200_OK)
+    
+
+class MarkTaskDoneAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, task_id):
+        try:
+            task = Task.objects.get(pk=task_id)
+        except Task.DoesNotExist:
+            return Response({'error': 'Task not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if task.executor != request.user:
+            return Response({'error': 'You are not authorized to mark this task as done'},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        task.is_done = True
+        task.save()
+
+        serializer = TaskSerializer(task)
+        return Response(serializer.data, status=status.HTTP_200_OK)
